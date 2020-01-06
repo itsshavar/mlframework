@@ -1,5 +1,6 @@
 import pandas as pd
 from sklearn import model_selection
+import numpy as np
 
 """
 - -- binary classification
@@ -56,8 +57,11 @@ class CrossValidation:
                 raise Exception("Invalid number of targets for this problem type")
             if self.num_targets < 2 and self.problem_type == "multi_col_regression":
                 raise Exception("Invalid number of targets for this problem type")
-            kf = model_selection.KFold(n_splits=self.num_folds)
-            for fold, (train_idx, val_idx) in enumerate(kf.split(X=self.dataframe)):
+            target = self.target_cols
+            bins = np.linspace(0, 1, 100)
+            y_binned = np.digitize(self.dataframe[target], bins)
+            skf = model_selection.StratifiedKFold(n_splits = self.num_folds, shuffle = True) 
+            for fold, (train_idx, val_idx) in enumerate(skf.split(X=self.dataframe,y = y_binned)):
                 self.dataframe.loc[val_idx, 'kfold'] = fold
         
         elif self.problem_type.startswith("holdout_"):
@@ -81,9 +85,9 @@ class CrossValidation:
 
 
 if __name__ == "__main__":
-    df = pd.read_csv("../input/train_multilabel.csv")
-    cv = CrossValidation(df, shuffle=True, target_cols=["attribute_ids"], 
-                         problem_type="multilabel_classification", multilabel_delimiter=" ")
+    df = pd.read_csv("../input/train.csv")
+    cv = CrossValidation(df, shuffle=True, target_cols=["SalePrice"], 
+                         problem_type="single_col_regression")
     df_split = cv.split()
     print(df_split.head())
     print(df_split.kfold.value_counts())
